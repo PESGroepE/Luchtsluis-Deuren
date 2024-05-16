@@ -456,6 +456,11 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+ * Interrupt functie wanneer er op de noodknop of binnenknop wordt gedrukt.
+ * Noodknop: roep de SendCANNoodKnop() functie aan
+ * Binnenknop: roep de SendCANBinnenKnop() functie aan
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	if (GPIO_Pin == noodknop_Pin){	//noodknop
 			SendCANNoodKnop(1);
@@ -465,31 +470,33 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	}
 }
 
+/**
+ * Interrupt functie wanneer er een bericht via CAN ontvangen wordt.
+ * Een bericht met ID 12 is voor het aansturen van de deuren.
+ */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &msg2, data2) == HAL_OK){
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
 		if(msg2.StdId == 12){
-		//	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3);
+			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3); //test led
 			if(data2[0] == 1){	//bij data '1' ontvangen binnen deur open
-				//binnenDeurOpen();
 				htim2.Instance->CCR1 = 5;
 			}
 			else if(data2[0] == 0){ //bij data '0' ontvangen moet het brandalarm uit
-				//binnenDeurDicht();
 				htim2.Instance->CCR1 = 15;
 			}
 			if(data2[1] == 1){
-				//buitenDeurOpen();
 				htim16.Instance->CCR1 = 25;
 			}
 			else if(data2[1] == 0){
-				//buitenDeurDicht();
 				htim16.Instance->CCR1 = 15;
 			}
 		}
 	}
 }
 
+/**
+ * Functie voor het zenden dat de noodknop is ingedruk.
+ */
 void SendCANNoodKnop(int noodKnop){
 	uint32_t mb;
 	CAN_TxHeaderTypeDef msg;
@@ -507,6 +514,10 @@ void SendCANNoodKnop(int noodKnop){
 		Error_Handler();
 	}
 }
+
+/**
+ * Functie voor het zenden dat de binnenknop is ingedruk.
+ */
 void SendCANBinnenKnop(int binnenKnop){
 	uint32_t mb;
 	CAN_TxHeaderTypeDef msg;
