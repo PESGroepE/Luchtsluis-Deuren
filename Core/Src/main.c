@@ -478,10 +478,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
 	if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &msg2, data2) == HAL_OK){
 		if(msg2.StdId == 12){
 			HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_3); //test led
-			if(data2[0] == 1){	//bij data '1' ontvangen binnen deur open
+			if(data2[0] == 1){	//bij data '1' deur openen
 				htim2.Instance->CCR1 = 5;
 			}
-			else if(data2[0] == 0){ //bij data '0' ontvangen moet het brandalarm uit
+			else if(data2[0] == 0){ //bij data '0' deur sluiten
 				htim2.Instance->CCR1 = 15;
 			}
 			if(data2[1] == 1){
