@@ -43,6 +43,7 @@
 CAN_HandleTypeDef hcan1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim6;
 TIM_HandleTypeDef htim16;
 
 UART_HandleTypeDef huart2;
@@ -58,12 +59,11 @@ static void MX_TIM16_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 void SendCANNoodKnop(int noodKnop);
 void SendCANBinnenKnop(int binnenKnop);
-void buitenNaarBinnen();
-void binnenNaarBuiten();
 
 /* USER CODE END PFP */
 
@@ -77,6 +77,9 @@ uint8_t data[] = {1};
 
 CAN_RxHeaderTypeDef msg2;
 uint8_t data2[8];
+
+uint32_t lastTime = 0;
+uint32_t currentTime = 0;
 
 /* USER CODE END 0 */
 
@@ -112,10 +115,14 @@ int main(void)
   MX_USART2_UART_Init();
   MX_CAN1_Init();
   MX_TIM2_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim16, TIM_CHANNEL_1);
+  HAL_TIM_Base_Start(&htim6);
+
+
 
   htim2.Instance->CCR1 = 15;
   htim16.Instance->CCR1 = 15;
@@ -310,6 +317,44 @@ static void MX_TIM2_Init(void)
 }
 
 /**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 3200 - 1;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 200;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
   * @brief TIM16 Initialization Function
   * @param None
   * @retval None
@@ -462,11 +507,18 @@ static void MX_GPIO_Init(void)
  * Binnenknop: roep de SendCANBinnenKnop() functie aan
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	currentTime = __HAL_TIM_GET_COUNTER(&htim2);
 	if (GPIO_Pin == noodknop_Pin){	//noodknop
-			SendCANNoodKnop(1);
+        if ((currentTime - lastTime) >= 60) {	//debouncing
+        	SendCANNoodKnop(1);
+            lastTime = currentTime;
+        }
 	}
-	if (GPIO_Pin == binnenKnop_Pin){	//knop binnen kant
-			SendCANBinnenKnop(1);
+	if (GPIO_Pin == binnenKnop_Pin){
+        if ((currentTime - lastTime) >= 60) {
+        	SendCANBinnenKnop(1);
+            lastTime = currentTime;
+        }
 	}
 }
 
